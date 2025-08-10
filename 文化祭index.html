@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- 追加 -->
+<title>予約ページ</title>
+<style>
+body {
+  font-family: sans-serif;
+  padding: 20px;
+  text-align: center;
+  font-size: 18px; /* 基本文字サイズを大きく */
+}
+#count {
+  font-size: 56px; /* 待ち人数の文字を大きく */
+  margin-bottom: 30px;
+}
+/* スマホ用にさらに大きくする調整 */
+@media (max-width: 600px) {
+  body {
+    font-size: 20px;
+  }
+  #count {
+    font-size: 64px;
+  }
+}
+</style>
+</head>
+<body>
+
+<h1>予約システム</h1>
+
+<div id="count">現在の待ち人数: 読み込み中...</div>
+
+人数: <input type="number" id="people" min="1" value="1" />
+<button id="reserveBtn" onclick="reserve()">予約する</button>
+
+<div id="result" style="margin-top:20px;"></div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzxahCYfb_sCeTTMz8_DibW0yOBA3SY8PRIwDLAUg0aLpFx-m4svei93x0p4HNV0kcD/exec";  //
+
+async function loadCount() {
+  try {
+    const res = await fetch(GAS_URL);
+    const data = await res.json();
+    document.getElementById("count").innerText = `現在の待ち人数: ${data.count} 人`;
+  } catch(e) {
+    document.getElementById("count").innerText = "待ち人数の読み込み失敗";
+  }
+}
+
+async function reserve() {
+  const people = parseInt(document.getElementById("people").value);
+  if (people < 1) {
+    alert("1人以上を入力してください");
+    return;
+  }
+  try {
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "reserve", people: people })
+    });
+    const data = await res.json();
+
+    document.getElementById("result").innerHTML =
+      `予約完了！受付番号: <b>${data.number}</b><br>
+       キャンセルする場合は <button onclick="cancel(${data.number})">ここをクリック</button>`;
+
+    // 予約ボタンを非表示にする
+    document.getElementById("reserveBtn").style.display = "none";
+
+    loadCount();
+  } catch(e) {
+    alert("予約に失敗しました");
+  }
+}
+
+async function cancel(number) {
+  try {
+    await fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "cancel", number: number })
+    });
+    alert("キャンセルしました");
+    document.getElementById("result").innerHTML = "";
+    document.getElementById("reserveBtn").style.display = "inline-block";
+    loadCount();
+  } catch(e) {
+    alert("キャンセルに失敗しました");
+  }
+}
+
+loadCount();
+setInterval(loadCount, 5000);
+</script>
+
+</body>
+</html>
